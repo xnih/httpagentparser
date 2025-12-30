@@ -50,6 +50,7 @@ class DetectorBase(object):
     _suggested_detectors = None
     platform = None
     bot = False
+    model = ""
 
     def __init__(self):
         if not self.name:
@@ -67,6 +68,8 @@ class DetectorBase(object):
                 result[self.info_type]['version'] = version
             if self.platform:
                 result['platform'] = {'name': self.platform, 'version': version}
+            result['model'] = self.getModel(agent, word)
+
             return True
 
     def checkWords(self, agent):
@@ -96,6 +99,22 @@ class DetectorBase(object):
                 if not self.allow_space_in_version:
                     version = version.split()[0]
                 return version
+
+    def getModel(self, agent, word):
+        """
+        => model string /None
+        """
+        model_markers = self.model_markers if \
+            isinstance(self.model_markers[0], (list, tuple)) else [self.model_markers]
+        model_part = model.split(word, 1)[-1]
+        for start, end in model_markers:
+            if model_part.startswith(start) and end in model_part:
+                model = model_part[1:]
+                if end:  # end could be empty string
+                    model = model.split(end)[0]
+                if not self.allow_space_in_model:
+                    model = model.split()[0]
+                return model
 
 
 class OS(DetectorBase):
@@ -165,6 +184,12 @@ class OperaNew(Browser):
     version_markers = [('/', '')]
 
 
+
+class OperaGX(Browser):
+    look_for = "OPX"
+    version_markers = ["/", ""]
+
+
 class Netscape(Browser):
     look_for = "Netscape"
     version_markers = [("/", '')]
@@ -192,10 +217,12 @@ class MSIE(Browser):
     name = "Microsoft Internet Explorer"
     version_markers = [" ", ";"]
 
+
 class MSEdge(Browser):
     look_for = "Edge"
     skip_if_found = ["MSIE"]
     version_markers = ["/", ""]
+
 
 class ChromiumEdge(Browser):
     look_for = "Edg/"
@@ -221,7 +248,7 @@ class Safari(Browser):
     skip_if_found = ["Edge", "YaBrowser", "FxiOS"]
 
     def checkWords(self, agent):
-        unless_list = ["Chrome", "OmniWeb", "wOSBrowser", "Android", "CriOS"]
+        unless_list = ["Chrome", "OmniWeb", "wOSBrowser", "Android", "CriOS", "OPX"]
         if self.look_for in agent:
             for word in unless_list:
                 if word in agent:
@@ -236,6 +263,7 @@ class Safari(Browser):
         else:
             return agent.split('Safari ')[-1].split(' ')[0].strip()  # Mobile Safari
 
+
 class GoogleBot(Browser):
     # https://support.google.com/webmasters/answer/1061943
     look_for = ["Googlebot", "Googlebot-News", "Googlebot-Image",
@@ -244,6 +272,7 @@ class GoogleBot(Browser):
     bot = True
     version_markers = [('/', ';'), ('/', ' ')]
 
+
 class GoogleFeedFetcher(Browser):
     look_for = "Feedfetcher-Google"
     bot = True
@@ -251,9 +280,11 @@ class GoogleFeedFetcher(Browser):
     def get_version(self, agent):
         pass
 
+
 class RunscopeRadar(Browser):
     look_for = "runscope-radar"
     bot = True
+
 
 class GoogleAppEngine(Browser):
     look_for = "AppEngine-Google"
@@ -262,6 +293,7 @@ class GoogleAppEngine(Browser):
     def get_version(self, agent):
         pass
 
+
 class GoogleApps(Browser):
     look_for = "GoogleApps script"
     bot = True
@@ -269,17 +301,21 @@ class GoogleApps(Browser):
     def get_version(self, agent):
         pass
 
+
 class TwitterBot(Browser):
     look_for = "Twitterbot"
     bot = True
+
 
 class TelegramBot(Browser):
     look_for = "TelegramBot"
     bot = True
 
+
 class MJ12Bot(Browser):
     look_for = "MJ12bot"
     bot = True
+
 
 class YandexBot(Browser):
     # http://help.yandex.com/search/robots/agent.xml
@@ -287,7 +323,14 @@ class YandexBot(Browser):
     bot = True
 
     def getVersion(self, agent, word):
-        return agent[agent.index('Yandex'):].split('/')[-1].split(')')[0].strip()
+        return agent[agent.index('Yandex'):].split('/')[1].replace(')', ';').split(';')[0].strip()
+
+
+class AmazonBot(Browser):
+    look_for = "Amazonbot"
+    version_markers = ["/", ";"]
+    bot = True
+
 
 class BingBot(Browser):
     look_for = "bingbot"
@@ -308,45 +351,56 @@ class LinkedInBot(Browser):
     look_for = "LinkedInBot"
     bot = True
 
+
 class ArchiveDotOrgBot(Browser):
     look_for = "archive.org_bot"
     bot = True
+
 
 class YoudaoBot(Browser):
     look_for = "YoudaoBot"
     bot = True
 
+
 class YoudaoBotImage(Browser):
     look_for = "YodaoBot-Image"
     bot = True
+
 
 class RogerBot(Browser):
     look_for = "rogerbot"
     bot = True
 
+
 class TweetmemeBot(Browser):
     look_for = "TweetmemeBot"
     bot = True
+
 
 class WebshotBot(Browser):
     look_for = "WebshotBot"
     bot = True
 
+
 class SensikaBot(Browser):
     look_for = "SensikaBot"
     bot = True
+
 
 class YesupBot(Browser):
     look_for = "YesupBot"
     bot = True
 
+
 class DotBot(Browser):
     look_for = "DotBot"
     bot = True
 
+
 class PhantomJS(Browser):
     look_for = "Browser/Phantom"
     bot = True
+
 
 class FacebookExternalHit(Browser):
     look_for = 'facebookexternalhit'
@@ -356,35 +410,46 @@ class FacebookExternalHit(Browser):
 class NokiaOvi(Browser):
     look_for = "S40OviBrowser"
 
+
 class UCBrowser(Browser):
     look_for = "UCBrowser"
+
 
 class BrowserNG(Browser):
     look_for = "BrowserNG"
 
+
 class Dolfin(Browser):
     look_for = 'Dolfin'
+
 
 class NetFront(Browser):
     look_for = 'NetFront'
 
+
 class Jasmine(Browser):
     look_for = 'Jasmine'
+
 
 class Openwave(Browser):
     look_for = 'Openwave'
 
+
 class UPBrowser(Browser):
     look_for = 'UP.Browser'
+
 
 class OneBrowser(Browser):
     look_for = 'OneBrowser'
 
+
 class ObigoInternetBrowser(Browser):
     look_for = 'ObigoInternetBrowser'
 
+
 class TelecaBrowser(Browser):
     look_for = 'TelecaBrowser'
+
 
 class MAUI(Browser):
     look_for = 'Browser/MAUI'
@@ -416,6 +481,11 @@ class Firefox(Browser):
 class SeaMonkey(Browser):
     look_for = "SeaMonkey"
     version_markers = [('/', '')]
+
+
+class iCanvas(Browser):
+    look_for = "iCanvas"
+    version_markers = ["/", ""]
 
 
 class Linux(OS):
@@ -452,6 +522,7 @@ class WindowsPhone(OS):
 class iOS(OS):
     look_for = ('iPhone', 'iPad')
     skip_if_found = ['like iPhone']
+#    version_markers = [("/", "")]
 
 
 class iPhone(Dist):
@@ -459,8 +530,76 @@ class iPhone(Dist):
     platform = 'iOS'
     skip_if_found = ['like iPhone']
 
+    iphone_versions = {
+        #https://gist.github.com/adamawolf/3048717
+        "iPhone1,1" : "iPhone",
+        "iPhone1,2" : "iPhone 3G",
+        "iPhone2,1" : "iPhone 3GS",
+        "iPhone3,1" : "iPhone 4",
+        "iPhone3,2" : "iPhone 4 GSM Rev A",
+        "iPhone3,3" : "iPhone 4 CDMA",
+        "iPhone4,1" : "iPhone 4S",
+        "iPhone5,1" : "iPhone 5 (GSM)",
+        "iPhone5,2" : "iPhone 5 (GSM+CDMA)",
+        "iPhone5,3" : "iPhone 5C (GSM)",
+        "iPhone5,4" : "iPhone 5C (Global)",
+        "iPhone6,1" : "iPhone 5S (GSM)",
+        "iPhone6,2" : "iPhone 5S (Global)",
+        "iPhone7,1" : "iPhone 6 Plus",
+        "iPhone7,2" : "iPhone 6",
+        "iPhone8,1" : "iPhone 6s",
+        "iPhone8,2" : "iPhone 6s Plus",
+        "iPhone8,4" : "iPhone SE (GSM)",
+        "iPhone9,1" : "iPhone 7",
+        "iPhone9,2" : "iPhone 7 Plus",
+        "iPhone9,3" : "iPhone 7",
+        "iPhone9,4" : "iPhone 7 Plus",
+        "iPhone10,1" : "iPhone 8",
+        "iPhone10,2" : "iPhone 8 Plus",
+        "iPhone10,3" : "iPhone X Global",
+        "iPhone10,4" : "iPhone 8",
+        "iPhone10,5" : "iPhone 8 Plus",
+        "iPhone10,6" : "iPhone X GSM",
+        "iPhone11,2" : "iPhone XS",
+        "iPhone11,4" : "iPhone XS Max",
+        "iPhone11,6" : "iPhone XS Max Global",
+        "iPhone11,8" : "iPhone XR",
+        "iPhone12,1" : "iPhone 11",
+        "iPhone12,3" : "iPhone 11 Pro",
+        "iPhone12,5" : "iPhone 11 Pro Max",
+        "iPhone12,8" : "iPhone SE 2nd Gen",
+        "iPhone13,1" : "iPhone 12 Mini",
+        "iPhone13,2" : "iPhone 12",
+        "iPhone13,3" : "iPhone 12 Pro",
+        "iPhone13,4" : "iPhone 12 Pro Max",
+        "iPhone14,2" : "iPhone 13 Pro",
+        "iPhone14,3" : "iPhone 13 Pro Max",
+        "iPhone14,4" : "iPhone 13 Mini",
+        "iPhone14,5" : "iPhone 13",
+        "iPhone14,6" : "iPhone SE 3rd Gen",
+        "iPhone14,7" : "iPhone 14",
+        "iPhone14,8" : "iPhone 14 Plus",
+        "iPhone15,2" : "iPhone 14 Pro",
+        "iPhone15,3" : "iPhone 14 Pro Max",
+        "iPhone15,4" : "iPhone 15",
+        "iPhone15,5" : "iPhone 15 Plus",
+        "iPhone16,1" : "iPhone 15 Pro",
+        "iPhone16,2" : "iPhone 15 Pro Max",
+        "iPhone17,1" : "iPhone 16 Pro",
+        "iPhone17,2" : "iPhone 16 Pro Max",
+        "iPhone17,3" : "iPhone 16",
+        "iPhone17,4" : "iPhone 16 Plus",
+        "iPhone17,5" : "iPhone 16e",
+        "iPhone18,1" : "iPhone 17 Pro",
+        "iPhone18,2" : "iPhone 17 Pro Max",
+        "iPhone18,3" : "iPhone 17",
+        "iPhone18,4" : "iPhone Air"
+         }
+
     def getVersion(self, agent, word):
         version_end_chars = [' ']
+        if "iPhone/iOS" in agent:
+            return agent.split('iPhone/iOS ')[-1].strip()
         if not "iPhone OS" in agent:
             return None
         part = agent.split('iPhone OS')[-1].strip()
@@ -470,13 +609,122 @@ class iPhone(Dist):
                 return version.replace('_', '.')
         return None
 
+    def getModel(self, agent, word):
+        m = "iPhone" + agent.split('(iPhone')[-1].split(';')[0]
+        m = self.iphone_versions.get(m, 'Unknown')
+        return m
+
 
 class IPad(Dist):
-    look_for = 'iPad;'
+    look_for = ['iPad;', 'iPad/']
     platform = 'iOS'
+
+    ipad_versions = {
+        #https://gist.github.com/adamawolf/3048717
+        "iPad1,1" : "iPad",
+        "iPad1,2" : "iPad 3G",
+        "iPad2,1" : "2nd Gen iPad",
+        "iPad2,2" : "2nd Gen iPad GSM",
+        "iPad2,3" : "2nd Gen iPad CDMA",
+        "iPad2,4" : "2nd Gen iPad New Revision",
+        "iPad3,1" : "3rd Gen iPad",
+        "iPad3,2" : "3rd Gen iPad CDMA",
+        "iPad3,3" : "3rd Gen iPad GSM",
+        "iPad2,5" : "iPad mini",
+        "iPad2,6" : "iPad mini GSM+LTE",
+        "iPad2,7" : "iPad mini CDMA+LTE",
+        "iPad3,4" : "4th Gen iPad",
+        "iPad3,5" : "4th Gen iPad GSM+LTE",
+        "iPad3,6" : "4th Gen iPad CDMA+LTE",
+        "iPad4,1" : "iPad Air (WiFi)",
+        "iPad4,2" : "iPad Air (GSM+CDMA)",
+        "iPad4,3" : "1st Gen iPad Air (China)",
+        "iPad4,4" : "iPad mini Retina (WiFi)",
+        "iPad4,5" : "iPad mini Retina (GSM+CDMA)",
+        "iPad4,6" : "iPad mini Retina (China)",
+        "iPad4,7" : "iPad mini 3 (WiFi)",
+        "iPad4,8" : "iPad mini 3 (GSM+CDMA)",
+        "iPad4,9" : "iPad Mini 3 (China)",
+        "iPad5,1" : "iPad mini 4 (WiFi)",
+        "iPad5,2" : "iPad mini 4 (WiFi+Cellular)",
+        "iPad5,3" : "iPad Air 2 (WiFi)",
+        "iPad5,4" : "iPad Air 2 (Cellular)",
+        "iPad6,3" : "iPad Pro (9.7 inch, WiFi)",
+        "iPad6,4" : "iPad Pro (9.7 inch, WiFi+LTE)",
+        "iPad6,7" : "iPad Pro (12.9 inch, WiFi)",
+        "iPad6,8" : "iPad Pro (12.9 inch, WiFi+LTE)",
+        "iPad6,11" : "iPad (2017)",
+        "iPad6,12" : "iPad (2017)",
+        "iPad7,1" : "iPad Pro 2nd Gen (WiFi)",
+        "iPad7,2" : "iPad Pro 2nd Gen (WiFi+Cellular)",
+        "iPad7,3" : "iPad Pro 10.5-inch 2nd Gen (WiFi)",
+        "iPad7,4" : "iPad Pro 10.5-inch 2nd Gen (WiFi+Cellular)",
+        "iPad7,5" : "iPad 6th Gen (WiFi)",
+        "iPad7,6" : "iPad 6th Gen (WiFi+Cellular)",
+        "iPad7,11" : "iPad 7th Gen 10.2-inch (WiFi)",
+        "iPad7,12" : "iPad 7th Gen 10.2-inch (WiFi+Cellular)",
+        "iPad8,1" : "iPad Pro 11 inch 3rd Gen (WiFi)",
+        "iPad8,2" : "iPad Pro 11 inch 3rd Gen (1TB, WiFi)",
+        "iPad8,3" : "iPad Pro 11 inch 3rd Gen (WiFi+Cellular)",
+        "iPad8,4" : "iPad Pro 11 inch 3rd Gen (1TB, WiFi+Cellular)",
+        "iPad8,5" : "iPad Pro 12.9 inch 3rd Gen (WiFi)",
+        "iPad8,6" : "iPad Pro 12.9 inch 3rd Gen (1TB, WiFi)",
+        "iPad8,7" : "iPad Pro 12.9 inch 3rd Gen (WiFi+Cellular)",
+        "iPad8,8" : "iPad Pro 12.9 inch 3rd Gen (1TB, WiFi+Cellular)",
+        "iPad8,9" : "iPad Pro 11 inch 4th Gen (WiFi)",
+        "iPad8,10" : "iPad Pro 11 inch 4th Gen (WiFi+Cellular)",
+        "iPad8,11" : "iPad Pro 12.9 inch 4th Gen (WiFi)",
+        "iPad8,12" : "iPad Pro 12.9 inch 4th Gen (WiFi+Cellular)",
+        "iPad11,1" : "iPad mini 5th Gen (WiFi)",
+        "iPad11,2" : "iPad mini 5th Gen (WiFi+Cellular)",
+        "iPad11,3" : "iPad Air 3rd Gen (WiFi)",
+        "iPad11,4" : "iPad Air 3rd Gen (WiFi+Cellular)",
+        "iPad11,6" : "iPad 8th Gen (WiFi)",
+        "iPad11,7" : "iPad 8th Gen (WiFi+Cellular)",
+        "iPad12,1" : "iPad 9th Gen (WiFi)",
+        "iPad12,2" : "iPad 9th Gen (WiFi+Cellular)",
+        "iPad14,1" : "iPad mini 6th Gen (WiFi)",
+        "iPad14,2" : "iPad mini 6th Gen (WiFi+Cellular)",
+        "iPad13,1" : "iPad Air 4th Gen (WiFi)",
+        "iPad13,2" : "iPad Air 4th Gen (WiFi+Cellular)",
+        "iPad13,4" : "iPad Pro 11 inch 5th Gen",
+        "iPad13,5" : "iPad Pro 11 inch 5th Gen",
+        "iPad13,6" : "iPad Pro 11 inch 5th Gen",
+        "iPad13,7" : "iPad Pro 11 inch 5th Gen",
+        "iPad13,8" : "iPad Pro 12.9 inch 5th Gen",
+        "iPad13,9" : "iPad Pro 12.9 inch 5th Gen",
+        "iPad13,10" : "iPad Pro 12.9 inch 5th Gen",
+        "iPad13,11" : "iPad Pro 12.9 inch 5th Gen",
+        "iPad13,16" : "iPad Air 5th Gen (WiFi)",
+        "iPad13,17" : "iPad Air 5th Gen (WiFi+Cellular)",
+        "iPad13,18" : "iPad 10th Gen (WiFi)",
+        "iPad13,19" : "iPad 10th Gen (WiFi+Cellular)",
+        "iPad14,3" : "iPad Pro 11 inch 4th Gen (WiFi)",
+        "iPad14,4" : "iPad Pro 11 inch 4th Gen (WiFi+Cellular)",
+        "iPad14,5" : "iPad Pro 12.9 inch 6th Gen (WiFi)",
+        "iPad14,6" : "iPad Pro 12.9 inch 6th Gen (WiFi+Cellular)",
+        "iPad14,8" : "iPad Air 11 inch 6th Gen (WiFi)",
+        "iPad14,9" : "iPad Air 11 inch 6th Gen (WiFi+Cellular)",
+        "iPad14,10" : "iPad Air 13 inch 6th Gen (WiFi)",
+        "iPad14,11" : "iPad Air 13 inch 6th Gen (WiFi+Cellular)",
+        "iPad15,3" : "iPad Air 11-inch 7th Gen (WiFi)",
+        "iPad15,4" : "iPad Air 11-inch 7th Gen (WiFi+Cellular)",
+        "iPad15,5" : "iPad Air 13-inch 7th Gen (WiFi)",
+        "iPad15,6" : "iPad Air 13-inch 7th Gen (WiFi+Cellular)",
+        "iPad15,7" : "iPad 11th Gen (WiFi)",
+        "iPad15,8" : "iPad 11th Gen (WiFi+Cellular)",
+        "iPad16,1" : "iPad mini 7th Gen (WiFi)",
+        "iPad16,2" : "iPad mini 7th Gen (WiFi+Cellular)",
+        "iPad16,3" : "iPad Pro 11 inch 5th Gen (WiFi)",
+        "iPad16,4" : "iPad Pro 11 inch 5th Gen (WiFi+Cellular)",
+        "iPad16,5" : "iPad Pro 12.9 inch 7th Gen (WiFi)",
+        "iPad16,6" : "iPad Pro 12.9 inch 7th Gen (WiFi+Cellular)"
+     }
 
     def getVersion(self, agent, word):
         version_end_chars = [' ']
+        if "iPad/iPadOS" in agent:
+            return agent.split('iPad/iPadOS ')[-1].strip()
         if not "CPU OS " in agent:
             return None
         part = agent.split('CPU OS ')[-1].strip()
@@ -485,6 +733,11 @@ class IPad(Dist):
                 version = part.split(c)[0]
                 return version.replace('_', '.')
         return None
+
+    def getModel(self, agent, word):
+        m = "iPad" + agent.split('(iPad')[-1].split(';')[0]
+        m = self.ipad_versions.get(m, 'Unknown')
+        return m
 
 
 class Macintosh(OS):
@@ -519,13 +772,35 @@ class Windows(OS):
     platform = 'Windows'
     skip_if_found = ["Windows Phone"]
     win_versions = {
+                    "10.0.26200": "11 25H2",
+                    "10.0.26100": "11 24H2",
+                    "10.0.22631": "11 23H2",
+                    "10.0.22621": "11 22H2",
+                    "10.0.22000": "11 21H2",
+                    "Windows 11": "11",
+                    "NT 11.0": "11",
+                    "10.0.19045": "10 22H2",
+                    "10.0.19044": "10 21H2",
+                    "10.0.19043": "10 21H1",
+                    "10.0.19042": "10 20H2",
+                    "10.0.19041": "10 2004",
+                    "10.0.18363": "10 1909",
+                    "10.0.18362": "10 1903",
+                    "10.0.17763": "10 1809",
+                    "10.0.17134": "10 1803",
+                    "10.0.16299": "10 1709",
+                    "10.0.15063": "10 1703",
+                    "10.0.14393": "10 1607",
+                    "10.0.10586": "10 1511",
+                    "10.0.10240": "10 1507",
                     "NT 10.0": "10",
-                    "NT 6.3": "8.1",
-                    "NT 6.2": "8",
-                    "NT 6.1": "7",
-                    "NT 6.0": "Vista",
+                    "NT 6.3": "Server 2012 R2 / 8.1",
+                    "NT 6.2": "Server 2012 / 8",
+                    "NT 6.1": "Server 2008 R2 / 7",
+                    "NT 6.0": "Server 2008 / Vista",
                     "NT 5.2": "Server 2003 / XP x64",
                     "NT 5.1": "XP",
+                    "Windows XP": "XP",
                     "NT 5.01": "2000 SP1",
                     "NT 5.0": "2000",
                     "98; Win 9x 4.90": "Me"
@@ -548,10 +823,11 @@ class Debian(Dist):
     look_for = 'Debian'
     version_markers = ["/", " "]
 
+
 class Chrome(Browser):
     look_for = "Chrome"
     version_markers = ["/", " "]
-    skip_if_found = [" OPR", "Edge", "YaBrowser", "Edg/"]
+    skip_if_found = [" OPR", "Edge", "YaBrowser", "Edg/", "YandexBot", "bingbot", "amazonbot", "OPX"]
 
     def getVersion(self, agent, word):
         part = agent.split(word + self.version_markers[0])[-1]
@@ -559,6 +835,7 @@ class Chrome(Browser):
         if '+' in version:
             version = version.split('+')[0]
         return version.strip()
+
 
 class YaBrowser(Browser):
     look_for = "YaBrowser"
@@ -571,6 +848,7 @@ class YaBrowser(Browser):
         if '+' in version:
             version = version.split('+')[0]
         return version.strip()
+
 
 class ChromeiOS(Browser):
     look_for = "CriOS"
@@ -596,6 +874,9 @@ class Android(Dist):
 
     def getVersion(self, agent, word):
         return agent.split(word)[-1].replace(')', ';').split(';')[0].strip()
+
+    def getModel(self, agent, word):
+        return agent.split(word)[-1].replace(') Apple', ';').split(';')[1].strip()
 
 
 class WebOS(Dist):
