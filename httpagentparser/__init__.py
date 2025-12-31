@@ -184,9 +184,8 @@ class OperaNew(Browser):
     version_markers = [('/', '')]
 
 
-
 class OperaGX(Browser):
-    look_for = "OPX"
+    look_for = ["OPX", "OperaGX"]
     version_markers = ["/", ""]
 
 
@@ -630,6 +629,10 @@ class Darwin(OS):
         v = agent.split('Darwin/')[-1]
         v = self.darwin_versions.get(v, 'Mac OS X / iOS - ' + v)
         return v
+      elif '(Darwin ' in agent:
+        v = agent.split('(Darwin ')[-1].split(' ')[0].strip()
+        v = self.darwin_versions.get(v, 'Mac OS X / iOS - ' + v)
+        return v
 
 
 class Linux(OS):
@@ -639,6 +642,10 @@ class Linux(OS):
     def getVersion(self, agent, word):
       if 'Linux ' in agent:
         return agent.split('Linux ')[-1].split(';')[0].split(')')[0].strip()
+      elif 'Linux/' in agent:
+        return agent.split('Linux/')[-1].replace(')', ' ').split(' ')[0].strip()
+      elif 'Linux-' in agent:
+        return agent.split('Linux-')[-1].split(';')[0].strip()
 
 
 class Blackberry(OS):
@@ -666,7 +673,7 @@ class WindowsPhone(OS):
 
 class iOS(OS):
     look_for = ('iPhone', 'iPad', 'iPod', 'iOS', 'IOS,')
-    skip_if_found = ['like iPhone']
+    skip_if_found = ['like iPhone', 'Darwin']
     version_markers = [("/", " "), ("/", ""), (" ", ";"), (" ", ")")]
 
 
@@ -751,6 +758,16 @@ class iPhone(Dist):
             return agent.split('iPhone; iOS')[-1].split(';')[0].strip()
         elif "OS," in agent:
             return agent.split('OS,')[-1].split(',')[0].strip()
+        elif "osVer/" in agent:
+            return agent.split('osVer/')[-1].split(' ')[0].strip()
+        elif "iOS; " in agent:
+            return agent.split('iOS; ')[-1].split(';')[0].strip()
+        elif "; iOS " in agent:
+            return agent.split('; iOS ')[-1].split(';')[0].strip()
+        elif "iOS/" in agent:
+            return agent.split('iOS/')[-1].split(' ')[0].strip()
+        elif "ios-iphone;" in agent:
+            return agent.split('ios-iphone;')[-1].split(';')[0].strip()
         elif "; CPU OS " in agent:
             part = agent.split('; CPU OS ')[-1].split(';')[0].strip()
             for c in version_end_chars:
@@ -770,17 +787,33 @@ class iPhone(Dist):
 
     def getModel(self, agent, word):
         if '(iPhone' in agent:
-          m = "iPhone" + agent.split('(iPhone')[-1].split(';')[0]
+          m = "iPhone" + agent.split('(iPhone')[-1].replace(')', ';').split(';')[0]
           m = self.iphone_versions.get(m, 'Unknown')
           return m
         elif ',iPhone' in agent:
           m = "iPhone" + agent.split(',iPhone')[-1].split(']')[0]
           m = self.iphone_versions.get(m, 'Unknown')
           return m
+        elif '; iPhone' in agent:
+          m = "iPhone" + agent.split('; iPhone')[-1].split(';')[0]
+          m = self.iphone_versions.get(m, 'Unknown')
+          return m
         elif 'hw/iPhone' in agent:
           m = "iPhone" + agent.replace('_', ',').split('hw/iPhone')[-1].split(']')[0]
           m = self.iphone_versions.get(m, 'Unknown')
           return m
+        elif ';ios-iphone;' in agent:
+          m = agent.split(';ios-iphone;')[0].split(';')[-1]
+          return m
+        elif 'model/' in agent:
+          m = agent.split('model/')[-1].split('/')[0]
+          if m.startswith('iPhone '):
+            i = m.rfind(' ')
+            return m[0:i]
+          else:
+            m = m.split('model/')[-1].split(' ')[0]
+            m = self.iphone_versions.get(m, 'Unknown')
+            return m
         else:
           return 'Unknown'
 
@@ -898,22 +931,34 @@ class IPad(Dist):
             return agent.split('iPad/iPadOS ')[-1].strip()
         elif "iPad/" in agent:
             return agent.split('iPad/')[-1].split(' ')[0].strip()
+        elif "iOS/" in agent:
+            return agent.split('iOS/')[-1].split(' ')[0].strip()
+        elif "iPad; iOS " in agent:
+            return agent.split('iPad; iOS ')[-1].split(';')[0].strip()
         elif "OS," in agent:
             return agent.split('OS,')[-1].split(',')[0].strip()
-        elif not "CPU OS " in agent:
-            return None
-        else:
+        elif "CPU Darwin " in agent:
+            return agent.split('CPU Darwin ')[-1].split(' ')[0].strip()
+        elif "CPU OS " in agent:
           part = agent.split('CPU OS ')[-1].strip()
           for c in version_end_chars:
             if c in part:
                 version = part.split(c)[0]
                 return version.replace('_', '.')
+        elif agent.startswith('iPad'):
+          version = agent.split('/')[-1].split(' ')[0]
+          return version
+        else:
           return None
 
     def getModel(self, agent, word):
         if '(iPad' in agent:
-          m = "iPad" + agent.split('(iPad')[-1].split(';')[0]
-          m = self.ipad_versions.get(m, 'Unknown')
+          m = "iPad" + agent.split('(iPad')[-1].replace(')', ';').split(';')[0]
+          m = self.ipad_versions.get(m, m)
+          return m
+        if ';iPad' in agent:
+          m = "iPad" + agent.split(';iPad')[-1].replace(')', ';').split(';')[0]
+          m = self.ipad_versions.get(m, m)
           return m
         elif ',iPad' in agent:
           m = "iPad" + agent.split(',iPad')[-1].split(']')[0]
@@ -921,6 +966,14 @@ class IPad(Dist):
           return m
         elif 'hw/iPad' in agent:
           m = "iPad" + agent.replace('_', ',').split('hw/iPad')[-1].split(']')[0]
+          m = self.ipad_versions.get(m, 'Unknown')
+          return m
+        elif 'model/iPad' in agent:
+          m = "iPad" + agent.split('model/iPad')[-1].split(' ')[0]
+          m = self.ipad_versions.get(m, 'Unknown')
+          return m
+        elif agent.startswith('iPad'):
+          m = agent.split('/')[0]
           m = self.ipad_versions.get(m, 'Unknown')
           return m
         else:
@@ -962,7 +1015,7 @@ class IPod(Dist):
 
 
 class AppleWatch(Dist):
-    look_for = ['Watch OS']
+    look_for = ['Watch OS', 'watchOS']
     platform = 'iOS'
 
     watchos_versions = {
@@ -1029,6 +1082,8 @@ class AppleWatch(Dist):
     def getVersion(self, agent, word):
         if "OS," in agent:
             return agent.split('OS,')[-1].split(',')[0].strip()
+        if "watchOS " in agent:
+            return agent.split('watchOS ')[-1].split(';')[0].strip()
 
     def getModel(self, agent, word):
         if ',Watch' in agent:
@@ -1069,27 +1124,79 @@ class AppleTV(Dist):
 
 class Macintosh(OS):
     look_for = ['Macintosh', '(Apple']
+    skip_if_found = ['Apple Watch']
 
     def getVersion(self, agent, word):
-        pass
+      if "Silicon" in agent:
+          return agent.split('Silicon')[-1].replace('_','.').split(')')[0].strip()
+      elif "macOS " in agent:
+          return agent.split('macOS ')[-1].split(';')[0].strip()
+
 
 
 class MacOS(Flavor):
-    look_for = ['Mac OS', 'MacOS', "Mac;", "macOS/", "macOS,", "(macOS", "Mac/", ".Mac"]
+    look_for = ['Mac OS', 'MacOS', "Mac;", "macOS/", "macOS,", "(macOS", "Mac/", ".Mac", "OSX"]
     platform = 'Mac OS'
     skip_if_found = ['iPhone', 'iPad', 'iPod']
 
     mac_versions = {
         #https://support.apple.com/en-us/108052
         #https://appledb.dev/device-selection/Macs.html
-        "MacBookAir6,1" : "MacBook Air (11-inch,2014)",
-        "MacBookAir6,2" : "MacBook Air (13-inch,2014)",
-        "MacBookAir7,1" : "MacBook Air (13-inch,2015)",
-        "MacBookAir7,2" : "MacBook Air (13-inch,2015 & 2017)",
+        "iMac13,1" : "iMac (21.5-inch, 2012)",
+        "iMac13,2" : "iMac (27-inch, 2012)",
+        "iMac14,1" : "iMac (21.5-inch, 2013, Integrated Graphics)",
+        "iMac14,2" : "iMac (27-inch, 2013)",
+        "iMac14,3" : "iMac (21.5-inch, 2013, Dedicated Graphics)",
+        "iMac14,4" : "iMac (21.5-inch, 2014)",
+        "iMac15,1" : "iMac (Retina 5K, 27-inch, 2014 & 2015)",
+        "iMac16,1" : "iMac (21.5-inch, 2015)",
+        "iMac16,2" : "iMac (Retina 4K, 21.5-inch, 2015)",
+        "iMac17,1" : "iMac (Retina 5K, 27-inch, 2015)",
+        "iMac18,1" : "iMac (21.5-inch, 2017)",
+        "iMac18,2" : "iMac (Retina 4K, 21.5-inch, 2017)",
+        "iMac18,3" : "iMac (Retina 5K, 27-inch, 2017)",
+        "iMac19,1" : "iMac (Retina 5K, 27-inch, 2019)",
+        "iMac19,2" : "iMac (Retina 4K, 21.5-inch, 2019)",
+        "iMac20,1" : "iMac (Retina 5K, 27-inch, 2020)",
+        "iMac20,1" : "iMac (Retina 5K, 27-inch, 2020)",
+        "iMac21,1" : "iMac (24-inch, M1, 2021)",
+        "iMac21,2" : "iMac (24-inch, M1, 2021)",
+        "MacBookAir6,1" : "MacBook Air (11-inch, 2014)",
+        "MacBookAir6,2" : "MacBook Air (13-inch, 2014)",
+        "MacBookAir7,1" : "MacBook Air (13-inch, 2015)",
+        "MacBookAir7,2" : "MacBook Air (13-inch, 2015 & 2017)",
         "MacBookAir8,1" : "MacBook Air (Retina, 13-inch, 2018)",
         "MacBookAir8,2" : "MacBook Air (Retina, 13-inch, 2019)",
         "MacBookAir9,1" : "MacBook Air (Retina, 13-inch, 2020)",
         "MacBookAir10,1" : "MacBook Air (M1, 2020)",
+        "MacBookPro14,1" : "MacBook Pro (13-inch, 2017, 2 Thunderbolt 3 ports)",
+        "MacBookPro14,2" : "MacBook Pro (13-inch, 2017, 4 Thunderbolt 3 ports)",
+        "MacBookPro14,3" : "MacBook Pro (15-inch, 2017)",
+        "MacBookPro15,1" : "MacBook Pro (15-inch, 2018 & 2019)",
+        "MacBookPro15,2" : "MacBook Pro (13-inch, 2018 & 2019, 4 Thunderbolt 3 ports)",
+        "MacBookPro15,3" : "MacBook Pro (15-inch, 2019)",
+        "MacBookPro15,4" : "MacBook Pro (13-inch, 2019, 2 Thunderbolt 3 ports)",
+        "MacBookPro16,1" : "MacBook Pro (16-inch, 2019)",
+        "MacBookPro16,2" : "MacBook Pro (13-inch, 2020, 4 Thunderbolt 3 ports)",
+        "MacBookPro16,3" : "MacBook Pro (13-inch, 2020, 2 Thunderbolt 3 ports)",
+        "MacBookPro16,4" : "MacBook Pro (16-inch, 2019)",
+        "MacBookPro17,1" : "MacBook Pro (13-inch, M1, 2020)",
+        "MacBookPro18,1" : "MacBook Pro (16-inch, 2021)",
+        "MacBookPro18,2" : "MacBook Pro (16-inch, 2021)",
+        "MacBookPro18,3" : "MacBook Pro (14-inch, 2021)",
+        "MacBookPro18,4" : "MacBook Pro (14-inch, 2021)",
+        "Macmini1,1" : "Mac mini (2006)",
+        "Macmini2,1" : "Mac mini (2007)",
+        "Macmini3,1" : "Mac mini (2009)",
+        "Macmini4,1" : "Mac mini (2010)",
+        "Macmini5,1" : "Mac mini (2011)",
+        "Macmini5,2" : "Mac mini (2011)",
+        "Macmini5,3" : "Mac mini (2011)",
+        "Macmini6,1" : "Mac mini (2012)",
+        "Macmini6,2" : "Mac mini (2012)",
+        "Macmini7,1" : "Mac mini (2014)",
+        "Macmini8,1" : "Mac mini (2018)",
+        "Macmini9,1" : "Mac mini (M1, 2020)",
         "Mac14,2" : "MacBook Air (M2, 2022)",
         "Mac14,3" : "Mac Mini  (2023)",
         "Mac14,5" : "MacBook Pro (14-inch, 2023)",
@@ -1134,6 +1241,8 @@ class MacOS(Flavor):
     def getVersion(self, agent, word):
         if 'Mac;OSX;' in agent:
           return agent.split('Mac;OSX;')[-1].split(' ')[0]
+        elif 'OSX_' in agent:
+          return agent.split('OSX_')[-1].split('/')[0]
         elif 'macOS/' in agent:
           return agent.split('macOS/')[-1].split(' ')[0]
         elif 'Mac/' in agent:
@@ -1146,6 +1255,8 @@ class MacOS(Flavor):
             return agent.split('[Mac OS X,')[-1].split(',')[0].strip()
         elif ".Mac " in agent:
             return agent.split('.Mac ')[-1].split(' ')[0].strip()
+        elif "Mac OS/" in agent:
+            return agent.split('Mac OS/')[-1].split(';')[0].strip()
         else:
           version_end_chars = [';', ')']
           part = agent.split('Mac OS')[-1].strip()
@@ -1157,17 +1268,32 @@ class MacOS(Flavor):
 
     def getModel(self, agent, word):
         if ',Mac' in agent:
-          #may want to adjust this for ,Mac vs ,MacBookAir, but for now works
+          #this works for Mac, MacBookPro, and MacBookAir
           m = "Mac" + agent.split(',Mac')[-1].split(']')[0]
-          m = self.mac_versions.get(m, 'Unknown')
+          m = self.mac_versions.get(m, 'Unknown: ' + m)
+          return m
+        elif ' Apple/' in agent:
+          #this works for Mac, MacBookPro, and MacBookAir
+          m = "Mac" + agent.split('Apple/Mac')[-1].split(')')[0]
+          m = self.mac_versions.get(m, 'Unknown: ' + m)
+          return m
+        elif '(Mac' in agent:
+          #this works for Mac, MacBookPro, and MacBookAir
+          m = "Mac" + agent.split('(Mac')[-1].split(')')[0]
+          m = self.mac_versions.get(m, 'Unknown: ' + m)
+          return m
+        elif ',iMac' in agent:
+          m = "iMac" + agent.split(',iMac')[-1].split(']')[0]
+          m = self.mac_versions.get(m, 'Unknown: ' + m)
           return m
         elif '; Mac' in agent:
-          #may want to adjust this for ,Mac vs ,MacBookAir, but for now works
+          #this works for Mac, MacBookPro, and MacBookAir
           m = "Mac" + agent.split('; Mac')[-1].split(')')[0]
-          m = self.mac_versions.get(m, 'Unknown')
+          m = self.mac_versions.get(m, 'Unknown: ' + m)
           return m
         else:
           return 'Unknown'
+
 
 class Windows(Dist):
     look_for = 'Windows'
@@ -1175,31 +1301,34 @@ class Windows(Dist):
 
 
 class Windows(OS):
-    look_for = ['Windows', 'windows', '.Win ']
+    look_for = ['Windows', 'windows', '.Win ', 'Win32']
     platform = 'Windows'
     skip_if_found = ["Windows Phone"]
     win_versions = {
-                    "26200": "11 25H2",
-                    "26100": "11 24H2",
-                    "22631": "11 23H2",
-                    "22621": "11 22H2",
-                    "22000": "11 21H2",
+                    "26200": "11 - 25H2",
+                    "26100": "11 - 24H2",
+                    "22631": "11 - 23H2",
+                    "22621": "11 - 22H2",
+                    "22000": "11 - 21H2",
                     "Windows 11": "11",
                     "NT 11.0": "11",
-                    "19045": "10 22H2",
-                    "19044": "10 21H2",
-                    "19043": "10 21H1",
-                    "19042": "10 20H2",
-                    "19041": "10 2004",
-                    "18363": "10 1909",
-                    "18362": "10 1903",
-                    "17763": "10 1809",
-                    "17134": "10 1803",
-                    "16299": "10 1709",
-                    "15063": "10 1703",
-                    "14393": "10 1607",
-                    "10586": "10 1511",
-                    "10240": "10 1507",
+                    "19045": "10 - 22H2",
+                    "19044": "10 - 21H2",
+                    "19043": "10 - 21H1",
+                    "19042": "10 - 20H2",
+                    "19041": "10 - 2004",
+                    "18363": "10 - 1909",
+                    "18362": "10 - 1903",
+                    "17763": "10 - 1809",
+                    "17134": "10 - 1803",
+                    "16299": "10 - 1709",
+                    "15063": "10 - 1703",
+                    "14393": "10 - 1607",
+                    "10586": "10 - 1511",
+                    "10240": "10 - 1507",
+                    "6.3.9600" : "8.1 / Server 2012 R2",
+                    "6.2.9200" : "8 / Server 2012",
+                    "6.1.7601" : "7 SP1",
                     "NT 10.0": "10",
                     "NT 6.3": "8.1 / Server 2012 R2",
                     "NT 6.2": "8 / Server 2012",
@@ -1217,13 +1346,25 @@ class Windows(OS):
     def getVersion(self, agent, word):
       if 'OS: ' in agent:
         v = agent.split('OS: ')[-1].split(' ')[0].strip()
-        v = self.win_versions.get(v, v)
-        return v
+        for key in self.win_versions.keys():
+          if v in key:
+            ver = self.win_versions.get(key)
+            return ver
+        values = {key: value for key, value in self.win_versions.items() if key in v}
+        #grab just the first value in case it is an empty dictionary and if so set to 'unknown'
+        ver = next(iter(values.values()), None)
+        if ver == None:
+          ver = v
+        return ver
       elif 'Windows-Update-Agent' in agent:
         #may be able to breakdown version to OS build at later date
         return 'Unknown'
       elif '.Win ' in agent:
         v = agent.split('.Win ')[-1].split(' ')[0].strip()
+        v = self.win_versions.get(v, v)
+        return v
+      elif 'Win32_' in agent:
+        v = agent.split('Win32_')[-1].split('/')[0].strip()
         v = self.win_versions.get(v, v)
         return v
       elif 'Win ' in agent:
@@ -1275,29 +1416,50 @@ class Windows(OS):
 
 
 class Ubuntu(Dist):
-    look_for = 'Ubuntu'
+    look_for = ['Ubuntu', 'ubuntu']
     version_markers = ["/", " "]
+    platform = 'Linux'
 
 
 class Debian(Dist):
     look_for = 'Debian'
+    skip_if_found = ["ubuntu"]
     version_markers = ["/", " "]
+    platform = 'Linux'
 
 
 class Fedora(Dist):
     look_for = 'Fedora'
     version_markers = ["/", " "]
+    platform = 'Linux'
 
 
 class RedHat(Dist):
     look_for = 'Red Hat'
     version_markers = ["/", " "]
+    platform = 'Linux'
 
 
 class Rocky(Dist):
     look_for = 'Rocky'
     version_markers = ["/", " "]
+    platform = 'Linux'
 
+
+class Gentoo(Dist):
+    look_for = 'gentoo'
+    version_markers = ["/", " "]
+    platform = 'Linux'
+
+
+class Mint(Dist):
+    look_for = 'Mint'
+    version_markers = ["/", " "]
+    platform = 'Linux'
+
+    def getVersion(self, agent, word):
+        if 'Mint' in agent:
+          return agent.split('Mint ')[-1].split(' ')[0]
 
 class Tizen(Dist):
     look_for = 'Tizen'
@@ -1496,8 +1658,9 @@ def simple_detect_tuple(agent, parsed_agent=None):
         (result.get('dist') and result['dist'].get('version')) or (result.get('os') and result['os'].get('version')) or ""
     browser = 'browser' in result and result['browser'].get('name') or UNKNOWN_BROWSER_NAME
     browser_version = 'browser' in result and result['browser'].get('version') or ""
+    model = 'model' in result and result['model'] or ""
 
-    return os, os_version, browser, browser_version
+    return os, os_version, browser, browser_version, model
 
 
 def simple_detect(agent, parsed_agent=None):
@@ -1510,9 +1673,9 @@ def simple_detect(agent, parsed_agent=None):
     @return:
         (os_name_version, browser_name_version)::Tuple(str)
     """
-    os, os_version, browser, browser_version = simple_detect_tuple(agent, parsed_agent=parsed_agent)
+    os, os_version, browser, browser_version, model = simple_detect_tuple(agent, parsed_agent=parsed_agent)
     if browser_version:
         browser = " ".join((browser, browser_version))
     if os_version:
         os = " ".join((os, os_version))
-    return os, browser
+    return os, browser, model
