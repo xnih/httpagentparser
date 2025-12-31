@@ -248,7 +248,7 @@ class Safari(Browser):
     skip_if_found = ["Edge", "YaBrowser", "FxiOS"]
 
     def checkWords(self, agent):
-        unless_list = ["Chrome", "OmniWeb", "wOSBrowser", "Android", "CriOS", "OPX"]
+        unless_list = ["Chrome", "OmniWeb", "wOSBrowser", "Android", "CriOS", "OPX", "Ddg"]
         if self.look_for in agent:
             for word in unless_list:
                 if word in agent:
@@ -488,12 +488,73 @@ class iCanvas(Browser):
     version_markers = ["/", ""]
 
 
+class GuardianBrowser(Browser):
+    look_for = "GuardianBrowser"
+    version_markers = ["/", ""]
+
+
+class DuckDuckGo(Browser):
+    look_for = "Ddg"
+    version_markers = ["/", ""]
+
+
+class Python(Browser):
+    look_for = ["python", 'python-requests']
+
+    def getVersion(self, agent, word):
+        version = agent.split("/")[-1]
+        return version
+
+
+class Java(Browser):
+    look_for = ["Java", "Java-http-client"]
+
+    def getVersion(self, agent, word):
+        version = agent.split("/")[-1]
+        return version
+
+
+class Darwin(OS):
+    look_for = 'Darwin'
+    platform = 'Darwin'
+    version_markers = [("/", "")]
+
+    darwin_versions = {
+        #https://theapplewiki.com/wiki/Kernel#Versions
+        "23.0.0" : "Mac OS X 14.0 / iOS 17.0",
+        "23.1.0" : "Mac OS X 14.1 / iOS 17.1",
+        "23.2.0" : "Mac OS X 14.2 / iOS 17.2",
+        "23.3.0" : "Mac OS X 14.3 / iOS 17.3",
+        "23.4.0" : "Mac OS X 14.4 / iOS 17.4",
+        "23.5.0" : "Mac OS X 14.5 / iOS 17.5",
+        "23.6.0" : "Mac OS X 14.6 - 14.8.3 / iOS 17.6 - 17.7.10",
+        "24.0.0" : "Mac OS X 15.0 / iOS 18.0",
+        "24.1.0" : "Mac OS X 15.1 / iOS 18.1",
+        "24.2.0" : "Mac OS X 15.2 / iOS 18.2",
+        "24.3.0" : "Mac OS X 15.3 / iOS 18.3",
+        "24.4.0" : "Mac OS X 15.4 / iOS 18.4",
+        "24.5.0" : "Mac OS X 15.5 / iOS 18.5",
+        "24.6.0" : "Mac OS X 15.6 - 15.7.4 / iOS 18.6 - 18.7.3",
+        "25.0.0" : "Mac OS X / iOS 26.0",
+        "25.1.0" : "Mac OS X / iOS 26.1",
+        "25.2.0" : "Mac OS X / iOS 26.2",
+        "25.3.0" : "Mac OS X / iOS 26.3"
+        }
+
+    def getVersion(self, agent, word):
+      if 'Darwin/' in agent:
+        v = agent.split('Darwin/')[-1]
+        v = self.darwin_versions.get(v, 'Mac OS X / iOS - ' + v)
+        return v
+
+
 class Linux(OS):
     look_for = 'Linux'
     platform = 'Linux'
 
     def getVersion(self, agent, word):
-        pass
+      if 'Linux ' in agent:
+        return agent.split('Linux ')[-1].split(';')[0].split(')')[0].strip()
 
 
 class Blackberry(OS):
@@ -520,15 +581,15 @@ class WindowsPhone(OS):
 
 
 class iOS(OS):
-    look_for = ('iPhone', 'iPad')
+    look_for = ('iPhone', 'iPad', 'iPod', 'iOS', 'IOS,')
     skip_if_found = ['like iPhone']
-#    version_markers = [("/", "")]
+    version_markers = [("/", " "), ("/", ""), (" ", ";"), (" ", ")")]
 
 
 class iPhone(Dist):
     look_for = 'iPhone'
     platform = 'iOS'
-    skip_if_found = ['like iPhone']
+    skip_if_found = ['like iPhone', 'iPad']
 
     iphone_versions = {
         #https://gist.github.com/adamawolf/3048717
@@ -600,23 +661,49 @@ class iPhone(Dist):
         version_end_chars = [' ']
         if "iPhone/iOS" in agent:
             return agent.split('iPhone/iOS ')[-1].strip()
-        if not "iPhone OS" in agent:
+        elif "iPhone/" in agent:
+            return agent.split('iPhone/')[-1].split(' ')[0].strip()
+        elif "(iPhone; iOS" in agent:
+            return agent.split('iPhone; iOS')[-1].split(';')[0].strip()
+        elif "OS," in agent:
+            return agent.split('OS,')[-1].split(',')[0].strip()
+        elif "; CPU OS " in agent:
+            part = agent.split('; CPU OS ')[-1].split(';')[0].strip()
+            for c in version_end_chars:
+                if c in part:
+                    version = part.split(c)[0]
+                    return version.replace('_', '.')
+        elif not "iPhone OS" in agent:
             return None
-        part = agent.split('iPhone OS')[-1].strip()
-        for c in version_end_chars:
+        else:
+          part = agent.split('iPhone OS')[-1].strip()
+          for c in version_end_chars:
             if c in part:
                 version = part.split(c)[0]
                 return version.replace('_', '.')
-        return None
+          return None
+
 
     def getModel(self, agent, word):
-        m = "iPhone" + agent.split('(iPhone')[-1].split(';')[0]
-        m = self.iphone_versions.get(m, 'Unknown')
-        return m
+        if '(iPhone' in agent:
+          m = "iPhone" + agent.split('(iPhone')[-1].split(';')[0]
+          m = self.iphone_versions.get(m, 'Unknown')
+          return m
+        elif ',iPhone' in agent:
+          m = "iPhone" + agent.split(',iPhone')[-1].split(']')[0]
+          m = self.iphone_versions.get(m, 'Unknown')
+          return m
+        elif 'hw/iPhone' in agent:
+          m = "iPhone" + agent.replace('_', ',').split('hw/iPhone')[-1].split(']')[0]
+          m = self.iphone_versions.get(m, 'Unknown')
+          return m
+        else:
+          return 'Unknown'
+
 
 
 class IPad(Dist):
-    look_for = ['iPad;', 'iPad/']
+    look_for = 'iPad'
     platform = 'iOS'
 
     ipad_versions = {
@@ -725,6 +812,56 @@ class IPad(Dist):
         version_end_chars = [' ']
         if "iPad/iPadOS" in agent:
             return agent.split('iPad/iPadOS ')[-1].strip()
+        elif "iPad/" in agent:
+            return agent.split('iPad/')[-1].split(' ')[0].strip()
+        elif "OS," in agent:
+            return agent.split('OS,')[-1].split(',')[0].strip()
+        elif not "CPU OS " in agent:
+            return None
+        else:
+          part = agent.split('CPU OS ')[-1].strip()
+          for c in version_end_chars:
+            if c in part:
+                version = part.split(c)[0]
+                return version.replace('_', '.')
+          return None
+
+    def getModel(self, agent, word):
+        if '(iPad' in agent:
+          m = "iPad" + agent.split('(iPad')[-1].split(';')[0]
+          m = self.ipad_versions.get(m, 'Unknown')
+          return m
+        elif ',iPad' in agent:
+          m = "iPad" + agent.split(',iPad')[-1].split(']')[0]
+          m = self.ipad_versions.get(m, 'Unknown')
+          return m
+        elif 'hw/iPad' in agent:
+          m = "iPad" + agent.replace('_', ',').split('hw/iPad')[-1].split(']')[0]
+          m = self.ipad_versions.get(m, 'Unknown')
+          return m
+        else:
+          return 'Unknown'
+
+
+class IPod(Dist):
+    look_for = ['iPod;', 'iPod/', 'iPod touch']
+    platform = 'iOS'
+
+    ipod_versions = {
+        #https://gist.github.com/adamawolf/3048717
+        "iPod1,1" : "1st Gen iPod",
+        "iPod2,1" : "2nd Gen iPod",
+        "iPod3,1" : "3rd Gen iPod",
+        "iPod4,1" : "4th Gen iPod",
+        "iPod5,1" : "5th Gen iPod",
+        "iPod6,1" : "6th Gen iPod",
+        "iPod7,1" : "7th Gen iPod"
+        }
+
+    def getVersion(self, agent, word):
+        version_end_chars = [' ']
+        if "iPad/iPadOS" in agent:
+            return agent.split('iPad/iPadOS ')[-1].strip()
         if not "CPU OS " in agent:
             return None
         part = agent.split('CPU OS ')[-1].strip()
@@ -735,32 +872,214 @@ class IPad(Dist):
         return None
 
     def getModel(self, agent, word):
-        m = "iPad" + agent.split('(iPad')[-1].split(';')[0]
-        m = self.ipad_versions.get(m, 'Unknown')
+        m = "iPod" + agent.split('(iPod')[-1].split(';')[0]
+        m = self.ipod_versions.get(m, 'Unknown')
         return m
 
 
+class AppleWatch(Dist):
+    look_for = ['Watch OS']
+    platform = 'iOS'
+
+    watchos_versions = {
+        #https://gist.github.com/adamawolf/3048717
+        "Watch1,1" : "Apple Watch 38mm case",
+        "Watch1,2" : "Apple Watch 42mm case",
+        "Watch2,6" : "Apple Watch Series 1 38mm case",
+        "Watch2,7" : "Apple Watch Series 1 42mm case",
+        "Watch2,3" : "Apple Watch Series 2 38mm case",
+        "Watch2,4" : "Apple Watch Series 2 42mm case",
+        "Watch3,1" : "Apple Watch Series 3 38mm case (GPS+Cellular)",
+        "Watch3,2" : "Apple Watch Series 3 42mm case (GPS+Cellular)",
+        "Watch3,3" : "Apple Watch Series 3 38mm case (GPS)",
+        "Watch3,4" : "Apple Watch Series 3 42mm case (GPS)",
+        "Watch4,1" : "Apple Watch Series 4 40mm case (GPS)",
+        "Watch4,2" : "Apple Watch Series 4 44mm case (GPS)",
+        "Watch4,3" : "Apple Watch Series 4 40mm case (GPS+Cellular)",
+        "Watch4,4" : "Apple Watch Series 4 44mm case (GPS+Cellular)",
+        "Watch5,1" : "Apple Watch Series 5 40mm case (GPS)",
+        "Watch5,2" : "Apple Watch Series 5 44mm case (GPS)",
+        "Watch5,3" : "Apple Watch Series 5 40mm case (GPS+Cellular)",
+        "Watch5,4" : "Apple Watch Series 5 44mm case (GPS+Cellular)",
+        "Watch5,9" : "Apple Watch SE 40mm case (GPS)",
+        "Watch5,10" : "Apple Watch SE 44mm case (GPS)",
+        "Watch5,11" : "Apple Watch SE 40mm case (GPS+Cellular)",
+        "Watch5,12" : "Apple Watch SE 44mm case (GPS+Cellular)",
+        "Watch6,1" : "Apple Watch Series 6 40mm case (GPS)",
+        "Watch6,2" : "Apple Watch Series 6 44mm case (GPS)",
+        "Watch6,3" : "Apple Watch Series 6 40mm case (GPS+Cellular)",
+        "Watch6,4" : "Apple Watch Series 6 44mm case (GPS+Cellular)",
+        "Watch6,6" : "Apple Watch Series 7 41mm case (GPS)",
+        "Watch6,7" : "Apple Watch Series 7 45mm case (GPS)",
+        "Watch6,8" : "Apple Watch Series 7 41mm case (GPS+Cellular)",
+        "Watch6,9" : "Apple Watch Series 7 45mm case (GPS+Cellular)",
+        "Watch6,10" : "Apple Watch SE 40mm case (GPS)",
+        "Watch6,11" : "Apple Watch SE 44mm case (GPS)",
+        "Watch6,12" : "Apple Watch SE 40mm case (GPS+Cellular)",
+        "Watch6,13" : "Apple Watch SE 44mm case (GPS+Cellular)",
+        "Watch6,14" : "Apple Watch Series 8 41mm case (GPS)",
+        "Watch6,15" : "Apple Watch Series 8 45mm case (GPS)",
+        "Watch6,16" : "Apple Watch Series 8 41mm case (GPS+Cellular)",
+        "Watch6,17" : "Apple Watch Series 8 45mm case (GPS+Cellular)",
+        "Watch6,18" : "Apple Watch Ultra",
+        "Watch7,1" : "Apple Watch Series 9 41mm case (GPS)",
+        "Watch7,2" : "Apple Watch Series 9 45mm case (GPS)",
+        "Watch7,3" : "Apple Watch Series 9 41mm case (GPS+Cellular)",
+        "Watch7,4" : "Apple Watch Series 9 45mm case (GPS+Cellular)",
+        "Watch7,5" : "Apple Watch Ultra 2",
+        "Watch7,8" : "Apple Watch Series 10 42mm case (GPS)",
+        "Watch7,9" : "Apple Watch Series 10 46mm case (GPS)",
+        "Watch7,10" : "Apple Watch Series 10 42mm case (GPS+Cellular)",
+        "Watch7,11" : "Apple Watch Series 10 46mm case (GPS+Cellular)",
+        "Watch7,12" : "Apple Watch Ultra 3 49mm case",
+        "Watch7,13" : "Apple Watch SE 3 40mm case",
+        "Watch7,14" : "Apple Watch SE 3 44mm case",
+        "Watch7,15" : "Apple Watch SE 3 40mm case (GPS+Cellular)",
+        "Watch7,16" : "Apple Watch SE 3 44mm case (GPS+Cellular)",
+        "Watch7,17" : "Apple Watch Series 11 42mm case",
+        "Watch7,18" : "Apple Watch Series 11 46mm case",
+        "Watch7,19" : "Apple Watch Series 11 42mm case (GPS+Celllular)",
+        "Watch7,20" : "Apple Watch Series 11 46mm case (GPS+Celllular)"
+        }
+
+    def getVersion(self, agent, word):
+        if "OS," in agent:
+            return agent.split('OS,')[-1].split(',')[0].strip()
+
+    def getModel(self, agent, word):
+        if ',Watch' in agent:
+          m = "Watch" + agent.split(',Watch')[-1].split(']')[0]
+          m = self.watchos_versions.get(m, 'Unknown')
+          return m
+        else:
+          return 'Unknown'
+
+
+class AppleTV(Dist):
+    look_for = 'Apple TVOS'
+    platform = 'iOS'
+
+    tv_versions = {
+        #https://theapplewiki.com/wiki/List_of_Apple_TVs
+        "AppleTV1,1" : "Apple TV 1st Gen",
+        "AppleTV2,1" : "Apple TV 2nd Gen",
+        "AppleTV3,1" : "Apple TV 3rd Gen",
+        "AppleTV3,2" : "Apple TV 3rd Gen",
+        "AppleTV5,3" : "Apple TV HD",
+        "AppleTV6,2" : "Apple TV 4K",
+        "AppleTV11,1" : "Apple TV 4K 2nd Gen",
+        "AppleTV14,1" : "Apple TV 4K 3rd Gen"
+        }
+
+    def getVersion(self, agent, word):
+        if "OS," in agent:
+            return agent.split('OS,')[-1].split(',')[0].strip()
+
+    def getModel(self, agent, word):
+        if ',AppleTV' in agent:
+          m = "AppleTV" + agent.split(',AppleTV')[-1].split(']')[0]
+          m = self.tv_versions.get(m, 'Unknown')
+          return m
+        else:
+          return 'Unknown'
+
 class Macintosh(OS):
-    look_for = 'Macintosh'
+    look_for = ['Macintosh', '(Apple']
 
     def getVersion(self, agent, word):
         pass
 
 
 class MacOS(Flavor):
-    look_for = 'Mac OS'
+    look_for = ['Mac OS', 'MacOS', "Mac;", "macOS/", "macOS,", "(macOS"]
     platform = 'Mac OS'
-    skip_if_found = ['iPhone', 'iPad']
+    skip_if_found = ['iPhone', 'iPad', 'iPod']
+
+    mac_versions = {
+        #https://support.apple.com/en-us/108052
+        #https://appledb.dev/device-selection/Macs.html
+        "MacBookAir6,1" : "MacBook Air (11-inch,2014)",
+        "MacBookAir6,2" : "MacBook Air (13-inch,2014)",
+        "MacBookAir7,1" : "MacBook Air (13-inch,2015)",
+        "MacBookAir7,2" : "MacBook Air (13-inch,2015 & 2017)",
+        "MacBookAir8,1" : "MacBook Air (Retina, 13-inch, 2018)",
+        "MacBookAir8,2" : "MacBook Air (Retina, 13-inch, 2019)",
+        "MacBookAir9,1" : "MacBook Air (Retina, 13-inch, 2020)",
+        "MacBookAir10,1" : "MacBook Air (M1, 2020)",
+        "Mac14,2" : "MacBook Air (M2, 2022)",
+        "Mac14,3" : "Mac Mini  (2023)",
+        "Mac14,5" : "MacBook Pro (14-inch, 2023)",
+        "Mac14,6" : "MacBook Pro (16-inch, 2023)",
+        "Mac14,7" : "MacBook Pro (13-inch, M2, 2022)",
+        "Mac14,8" : "Mac Pro (2023)",
+        "Mac14,9" : "MacBook Pro (14-inch, 2023)",
+        "Mac14,10" : "MacBook Pro (16-inch, 2023)",
+        "Mac14,12" : "Mac Mini (2023)",
+        "Mac14,13" : "Mac Studio (2023)",
+        "Mac14,14" : "Mac Studio (2023)",
+        "Mac14,15" : "MacBook Air (15-inch, M2, 2023)",
+        "Mac15,1" : "iMac (Retina 5K, 27-inch, 2015)",
+        "Mac15,3" : "MacBook Pro (14-inch, 2023)",
+        "Mac15,4" : "iMac (24-inch, M3, 2023)",
+        "Mac15,5" : "iMac (24-inch, M3, 2023)",
+        "Mac15,6" : "MacBook Pro (14-inch, 2023)",
+        "Mac15,7" : "MacBook Pro (16-inch, 2023)",
+        "Mac15,8" : "MacBook Pro (14-inch, 2023)",
+        "Mac15,9" : "MacBook Pro (16-inch, 2023)",
+        "Mac15,10" : "MacBook Pro (14-inch, 2023)",
+        "Mac15,11" : "MacBook Pro (16-inch, 2023)",
+        "Mac15,12" : "MacBook Air (13-inch, M3, 2024)",
+        "Mac15,13" : "MacBook Air (15-inch, M3, 2024)",
+        "Mac15,14" : "Mac Studio (2025)",
+        "Mac16,1" : "MacBook Pro (14-inch, 2024)",
+        "Mac16,2" : "iMac (24-inch, M4, 2024)",
+        "Mac16,3" : "iMac (24-inch, M4, 2024)",
+        "Mac16,5" : "MacBook Pro (16-inch, 2024)",
+        "Mac16,6" : "MacBook Pro (14-inch, 2024)",
+        "Mac16,7" : "MacBook Pro (16-inch, 2024)",
+        "Mac16,8" : "MacBook Pro (14-inch, 2024)",
+        "Mac16,9" : "Mac Studio (2025)",
+        "Mac16,10" : "Mac mini (2024)",
+        "Mac16,11" : "Mac mini (2024)",
+        "Mac16,12" : "MacBook Air (13-inch, M4, 2025)",
+        "Mac16,13" : "MacBook Air (15-inch, M4, 2025)",
+        "Mac17,2" : "MacBook Pro (14-inch, M5, 2025)",
+        }
+
 
     def getVersion(self, agent, word):
-        version_end_chars = [';', ')']
-        part = agent.split('Mac OS')[-1].strip()
-        for c in version_end_chars:
+        if 'Mac;OSX;' in agent:
+          return agent.split('Mac;OSX;')[-1].split(' ')[0]
+        elif 'macOS/' in agent:
+          return agent.split('macOS/')[-1].split(' ')[0]
+        elif '(macOS' in agent:
+          return agent.split('(macOS')[-1].split('/')[0].split(';')[0].strip()
+        elif "macOS," in agent:
+            return agent.split('OS,')[-1].split(',')[0].strip()
+        elif "[Mac OS X," in agent:
+            return agent.split('[Mac OS X,')[-1].split(',')[0].strip()
+        else:
+          version_end_chars = [';', ')']
+          part = agent.split('Mac OS')[-1].strip()
+          for c in version_end_chars:
             if c in part:
                 version = part.split(c)[0]
                 return version.replace('_', '.')
-        return ''
+          return ''
 
+    def getModel(self, agent, word):
+        if ',Mac' in agent:
+          #may want to adjust this for ,Mac vs ,MacBookAir, but for now works
+          m = "Mac" + agent.split(',Mac')[-1].split(']')[0]
+          m = self.mac_versions.get(m, 'Unknown')
+          return m
+        elif '; Mac' in agent:
+          #may want to adjust this for ,Mac vs ,MacBookAir, but for now works
+          m = "Mac" + agent.split('; Mac')[-1].split(')')[0]
+          m = self.mac_versions.get(m, 'Unknown')
+          return m
+        else:
+          return 'Unknown'
 
 class Windows(Dist):
     look_for = 'Windows'
@@ -807,7 +1126,12 @@ class Windows(OS):
     }
 
     def getVersion(self, agent, word):
-        v = agent.split('Windows')[-1].split(';')[0].strip()
+      if 'OS: ' in agent:
+        v = agent.split('OS: ')[-1].split(' ')[0].strip()
+        v = self.win_versions.get(v, v)
+        return v
+      else:
+        v = agent.split('Windows')[-1].split(';')[0].replace('/', '').strip()
         if ')' in v:
             v = v.split(')')[0]
         v = self.win_versions.get(v, v)
@@ -824,10 +1148,24 @@ class Debian(Dist):
     version_markers = ["/", " "]
 
 
+class Fedora(Dist):
+    look_for = 'Fedora'
+    version_markers = ["/", " "]
+
+
+class RedHat(Dist):
+    look_for = 'Red Hat'
+    version_markers = ["/", " "]
+
+
+class Rocky(Dist):
+    look_for = 'Rocky'
+    version_markers = ["/", " "]
+
 class Chrome(Browser):
     look_for = "Chrome"
     version_markers = ["/", " "]
-    skip_if_found = [" OPR", "Edge", "YaBrowser", "Edg/", "YandexBot", "bingbot", "amazonbot", "OPX"]
+    skip_if_found = [" OPR", "Edge", "YaBrowser", "Edg/", "YandexBot", "bingbot", "amazonbot", "OPX", "GuardianBrowser"]
 
     def getVersion(self, agent, word):
         part = agent.split(word + self.version_markers[0])[-1]
@@ -873,10 +1211,23 @@ class Android(Dist):
     skip_if_found = ['Windows Phone']
 
     def getVersion(self, agent, word):
-        return agent.split(word)[-1].replace(')', ';').split(';')[0].strip()
+      if 'Android ' in agent:
+        return agent.split('Android ')[1].replace(')', ';').split(';')[0].strip()
+      elif 'Android/' in agent:
+        return agent.split('Android/')[1].replace(')', ';').split(' ')[0].split(';')[0].strip()
+      else:
+        return agent.split('Android')[-1].replace(')', ';').split(';')[0].strip()
 
     def getModel(self, agent, word):
-        return agent.split(word)[-1].replace(') Apple', ';').split(';')[1].strip()
+        if ') Apple' in agent:
+          return agent.split(word)[-1].replace(') Apple', ';').split(';')[1].strip()
+        elif 'en_' in agent:
+          #need to address other languages not just english versions, but works for my use case, but has another value in there sometime too, so more digging needed.
+          return agent.split('en_')[-1].split(';')[1].strip()
+        elif ')' in agent:
+          return agent.split(word)[-1].replace(')', ';').split(';')[1].strip()
+        else:
+          return 'Unknown'
 
 
 class WebOS(Dist):
@@ -903,6 +1254,14 @@ class PlayStation(OS):
     look_for = ['PlayStation', 'PLAYSTATION']
     platform = 'PlayStation'
     version_markers = [" ", ")"]
+
+
+class Axios(OS):
+    look_for = 'axios'
+    platform = 'axios'
+
+    def getVersion(self, agent, word):
+        return agent.split('/')[-1].strip()
 
 
 class prefs:  # experimental
