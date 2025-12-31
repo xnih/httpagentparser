@@ -407,6 +407,12 @@ class FacebookExternalHit(Browser):
     bot = True
 
 
+class SevenSiters(Browser):
+    look_for = ["7Siters"]
+    bot = True
+    version_markers = [('/', ';')]
+
+
 class NokiaOvi(Browser):
     look_for = "S40OviBrowser"
 
@@ -478,6 +484,16 @@ class Firefox(Browser):
     skip_if_found = ["SeaMonkey", "web/snippet"]
 
 
+class Firebird(Browser):
+    look_for = ["Firebird"]
+    version_markers = [('/', '')]
+
+
+class Thunderbird(Browser):
+    look_for = ["Thunderbird"]
+    version_markers = [('/', '')]
+
+
 class SeaMonkey(Browser):
     look_for = "SeaMonkey"
     version_markers = [('/', '')]
@@ -512,6 +528,74 @@ class Java(Browser):
     def getVersion(self, agent, word):
         version = agent.split("/")[-1]
         return version
+
+
+class Curl(Browser):
+    look_for = ["curl"]
+
+    def getVersion(self, agent, word):
+        version = agent.split("/")[-1]
+        return version
+
+
+class Roku(Dist):
+    look_for = ["Roku/DVP-", "RokuOS"]
+    platform = 'Linux'
+
+    def getVersion(self, agent, word):
+      if 'Roku/DVP-' in agent:
+          version = agent.split('(')[-1].split(')')[0].strip()
+          return version
+      elif 'RokuOS' in agent:
+          version = agent.split('/')[-1].split(',')[0].strip()
+          return version
+      else:
+        return 'Unknown'
+
+
+class NetFlix(Browser):
+    look_for = ["Netflix/"]
+
+    device_versions = {
+        "LGTV" : "LG TV",
+        "NFANDROID2-PRV-FIRETVSTICK2016" : "Fire TV Stick 2016",
+        "NFANDROID2-PRV-FIRETVSTICKPLUS2020" : "Fire TV Stick 2020",
+        "NFANDROID2-PRV-FTVEAML950X4FHD2022" : "Fire TV Stick 2022 HD",
+        "NFANDROID2-PRV-FTVEAML950X4HD2022" : "Fire TV Stick 2022 HD",
+        "NFANDROID2-PRV-FIRETVN" : "Fire TV",
+        "NFANDROID2-PRV-FTV" : "Fire TV",
+        "RKU-381XX-" : "Roku Stream Stick 381xx (6th Gen)",
+        "RKU-392XX-" : "Roku Premiere 392xx",
+        "RKU-393XX-" : "Roku Express HD Streaming media Player 393xx",
+        "RKU-39XXX-" : "Roku Express HD Streaming media Player 39xxx",
+        "RKU-42XXX-" : "Roku 3 Media Streamer 4200X",
+        "RKU-467XX-" : "Roku Ultra 467XX",
+        "RKU-5XXXX-" : "Roku 5 Media Streamer 5000X",
+        "RKU-" : "Ruku",
+        "VIZMG152UI" : "Vizio M Series G1 52in TV",
+        "VIZMG155UI" : "Vizio M Series G1 55in TV",
+        "VIZ" : "Vizio TV",
+        }
+
+    def getVersion(self, agent, word):
+        version = agent.split("Netflix/")[-1].split(' ')[0].strip()
+        return version
+
+    def getModel(self, agent, word):
+        model = 'Unknown'
+        if 'DEVTYPE=' in agent:
+          m = agent.split('DEVTYPE=')[-1].split(';')[0]
+          for key in self.device_versions.keys():
+            model = 'Unknown: ' + m
+            if m in key:
+              model = self.device_versions.get(key)
+              return model
+          values = {key: value for key, value in self.device_versions.items() if key in m}
+          #grab just the first value in case it is an empty dictionary and if so set to 'unknown'
+          model = next(iter(values.values()), None)
+          if model == None:
+            model = 'Unknown: ' + m
+        return model
 
 
 class Darwin(OS):
@@ -991,7 +1075,7 @@ class Macintosh(OS):
 
 
 class MacOS(Flavor):
-    look_for = ['Mac OS', 'MacOS', "Mac;", "macOS/", "macOS,", "(macOS"]
+    look_for = ['Mac OS', 'MacOS', "Mac;", "macOS/", "macOS,", "(macOS", "Mac/", ".Mac"]
     platform = 'Mac OS'
     skip_if_found = ['iPhone', 'iPad', 'iPod']
 
@@ -1052,12 +1136,16 @@ class MacOS(Flavor):
           return agent.split('Mac;OSX;')[-1].split(' ')[0]
         elif 'macOS/' in agent:
           return agent.split('macOS/')[-1].split(' ')[0]
+        elif 'Mac/' in agent:
+          return agent.split('Mac/')[-1]
         elif '(macOS' in agent:
           return agent.split('(macOS')[-1].split('/')[0].split(';')[0].strip()
         elif "macOS," in agent:
             return agent.split('OS,')[-1].split(',')[0].strip()
         elif "[Mac OS X," in agent:
             return agent.split('[Mac OS X,')[-1].split(',')[0].strip()
+        elif ".Mac " in agent:
+            return agent.split('.Mac ')[-1].split(' ')[0].strip()
         else:
           version_end_chars = [';', ')']
           part = agent.split('Mac OS')[-1].strip()
@@ -1087,41 +1175,42 @@ class Windows(Dist):
 
 
 class Windows(OS):
-    look_for = 'Windows'
+    look_for = ['Windows', 'windows', '.Win ']
     platform = 'Windows'
     skip_if_found = ["Windows Phone"]
     win_versions = {
-                    "10.0.26200": "11 25H2",
-                    "10.0.26100": "11 24H2",
-                    "10.0.22631": "11 23H2",
-                    "10.0.22621": "11 22H2",
-                    "10.0.22000": "11 21H2",
+                    "26200": "11 25H2",
+                    "26100": "11 24H2",
+                    "22631": "11 23H2",
+                    "22621": "11 22H2",
+                    "22000": "11 21H2",
                     "Windows 11": "11",
                     "NT 11.0": "11",
-                    "10.0.19045": "10 22H2",
-                    "10.0.19044": "10 21H2",
-                    "10.0.19043": "10 21H1",
-                    "10.0.19042": "10 20H2",
-                    "10.0.19041": "10 2004",
-                    "10.0.18363": "10 1909",
-                    "10.0.18362": "10 1903",
-                    "10.0.17763": "10 1809",
-                    "10.0.17134": "10 1803",
-                    "10.0.16299": "10 1709",
-                    "10.0.15063": "10 1703",
-                    "10.0.14393": "10 1607",
-                    "10.0.10586": "10 1511",
-                    "10.0.10240": "10 1507",
+                    "19045": "10 22H2",
+                    "19044": "10 21H2",
+                    "19043": "10 21H1",
+                    "19042": "10 20H2",
+                    "19041": "10 2004",
+                    "18363": "10 1909",
+                    "18362": "10 1903",
+                    "17763": "10 1809",
+                    "17134": "10 1803",
+                    "16299": "10 1709",
+                    "15063": "10 1703",
+                    "14393": "10 1607",
+                    "10586": "10 1511",
+                    "10240": "10 1507",
                     "NT 10.0": "10",
-                    "NT 6.3": "Server 2012 R2 / 8.1",
-                    "NT 6.2": "Server 2012 / 8",
-                    "NT 6.1": "Server 2008 R2 / 7",
-                    "NT 6.0": "Server 2008 / Vista",
-                    "NT 5.2": "Server 2003 / XP x64",
+                    "NT 6.3": "8.1 / Server 2012 R2",
+                    "NT 6.2": "8 / Server 2012",
+                    "NT 6.1": "7 / Server 2008 R2",
+                    "NT 6.0": "Vista / Server 2008",
+                    "NT 5.2": "XP x64 / Server 2003",
                     "NT 5.1": "XP",
                     "Windows XP": "XP",
                     "NT 5.01": "2000 SP1",
                     "NT 5.0": "2000",
+                    "NT 4.0": "NT",
                     "98; Win 9x 4.90": "Me"
     }
 
@@ -1130,12 +1219,59 @@ class Windows(OS):
         v = agent.split('OS: ')[-1].split(' ')[0].strip()
         v = self.win_versions.get(v, v)
         return v
-      else:
-        v = agent.split('Windows')[-1].split(';')[0].replace('/', '').strip()
-        if ')' in v:
-            v = v.split(')')[0]
+      elif 'Windows-Update-Agent' in agent:
+        #may be able to breakdown version to OS build at later date
+        return 'Unknown'
+      elif '.Win ' in agent:
+        v = agent.split('.Win ')[-1].split(' ')[0].strip()
         v = self.win_versions.get(v, v)
         return v
+      elif 'Win ' in agent:
+        v = agent.split('Win ')[-1].split(';')[0].strip()
+        v = self.win_versions.get(v, v)
+        return v
+      elif 'Windows/' in agent:
+        v = agent.split('Windows/')[-1].split(' ')[0].strip()
+        for key in self.win_versions.keys():
+          if v in key:
+            ver = self.win_versions.get(key)
+            return ver
+        values = {key: value for key, value in self.win_versions.items() if key in v}
+        #grab just the first value in case it is an empty dictionary and if so set to 'unknown'
+        ver = next(iter(values.values()), None)
+        if ver == None:
+          ver = v
+        return ver
+      elif 'PC-Windows;' in agent:
+        v = agent.split('PC-Windows;')[-1].split(';')[0].strip()
+        for key in self.win_versions.keys():
+          if v in key:
+            ver = self.win_versions.get(key)
+            return ver
+        values = {key: value for key, value in self.win_versions.items() if key in v}
+        #grab just the first value in case it is an empty dictionary and if so set to 'unknown'
+        ver = next(iter(values.values()), None)
+        if ver == None:
+          ver = v
+        return ver
+      else:
+        v = agent.split('Windows')[-1].replace(',', ';').split(';')[0].replace('/', '').strip()
+        if ')' in v:
+            v = v.split(')')[0]
+        elif v == '':
+          return 'Unknown'
+
+        for key in self.win_versions.keys():
+          if v in key:
+            ver = self.win_versions.get(key)
+            return ver
+
+        values = {key: value for key, value in self.win_versions.items() if key in v}
+        #grab just the first value in case it is an empty dictionary and if so set to 'unknown'
+        ver = next(iter(values.values()), None)
+        if ver == None:
+          ver = v
+        return ver
 
 
 class Ubuntu(Dist):
@@ -1161,6 +1297,21 @@ class RedHat(Dist):
 class Rocky(Dist):
     look_for = 'Rocky'
     version_markers = ["/", " "]
+
+
+class Tizen(Dist):
+    look_for = 'Tizen'
+    platform = 'Linux'
+    version_markers = [("/", " "), (" ", ")")]
+
+    def getModel(self, agent, word):
+        if 'Samsung;' in agent:
+          return 'Samsung: ' + agent.split('Samsung;')[-1].split(';')[0].strip()
+        elif 'SMART-TV' in agent:
+          return 'Smart TV'
+        else:
+          return 'Unknown'
+
 
 class Chrome(Browser):
     look_for = "Chrome"
@@ -1253,6 +1404,12 @@ class Symbian(OS):
 class PlayStation(OS):
     look_for = ['PlayStation', 'PLAYSTATION']
     platform = 'PlayStation'
+    version_markers = [" ", ")"]
+
+
+class Xbox(OS):
+    look_for = ['XBox', 'XboxOne']
+    platform = 'XBox'
     version_markers = [" ", ")"]
 
 
