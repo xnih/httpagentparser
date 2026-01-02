@@ -768,7 +768,7 @@ class iPhone(Dist):
             return agent.split('iOS; ')[-1].split(';')[0].replace('_', '.').strip()
         elif "; iOS " in agent:
             return agent.split('; iOS ')[-1].split(';')[0].replace('_', '.').strip()
-        elif ("iOS/" in agent) and ("CriOS" not in agent) and ("EdgiOS" not in agent):
+        elif ("iOS/" in agent) and ("CriOS" not in agent) and ("EdgiOS" not in agent) and ("FxiOS" not in agent):
             return agent.split('iOS/')[-1].split(' ')[0].replace('_', '.').strip()
         elif "ios-iphone;" in agent:
             return agent.split('ios-iphone;')[-1].split(';')[0].replace('_', '.').strip()
@@ -921,7 +921,7 @@ class IPad(Dist):
             return agent.split('iPad/iPadOS ')[-1].replace('_', '.').strip()
         elif "iPad/" in agent:
             return agent.split('iPad/')[-1].split(' ')[0].replace('_', '.').strip()
-        elif ("iOS/" in agent) and ("CriOS" not in agent) and ("EdgiOS" not in agent):
+        elif ("iOS/" in agent) and ("CriOS" not in agent) and ("EdgiOS" not in agent) and ("FxiOS" not in agent):
             return agent.split('iOS/')[-1].split(' ')[0].replace('_', '.').strip()
         elif "iPad; iOS " in agent:
             return agent.split('iPad; iOS ')[-1].split(';')[0].replace('_', '.').strip()
